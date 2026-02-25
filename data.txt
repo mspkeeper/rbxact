@@ -15,7 +15,7 @@ local speed = 1
 -- ========================
 -- 🔧 AUTO UPDATE SETTINGS
 -- ========================
-local GITHUB_RAW_URL = "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/script.lua"
+local GITHUB_RAW_URL = "https://raw.githubusercontent.com/mspkeeper/rbxact/refs/heads/main/data.txt"
 local CHECK_INTERVAL = 15
 
 -- ========================
