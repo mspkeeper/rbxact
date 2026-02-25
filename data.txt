@@ -1,54 +1,142 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 
--- 🔧 SETTINGS
-local targetName = "updatevar" -- Change this
-local radiusX = 10 -- Width of ellipse
-local radiusZ = 6  -- Depth of ellipse
-local speed = 1    -- Orbit speed
+-- ========================
+-- 🔧 ORBIT SETTINGS
+-- ========================
+local targetName = "TARGET_PLAYER_NAME" -- Change this
+local radiusX = 10
+local radiusZ = 6
+local speed = 1
 
+-- ========================
+-- 🔧 AUTO UPDATE SETTINGS
+-- ========================
+local GITHUB_RAW_URL = "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/script.lua"
+local CHECK_INTERVAL = 15
+
+-- ========================
+-- INTERNAL
+-- ========================
 local angle = 0
-local connection
+local orbitConnection
+local lastHash = nil
+local running = true
 
+-- ========================
+-- HASH FUNCTION
+-- ========================
+local function simpleHash(str)
+	local hash = 0
+	for i = 1, #str do
+		hash = (hash + string.byte(str, i) * i) % 2147483647
+	end
+	return hash
+end
+
+-- ========================
+-- FETCH REMOTE SCRIPT
+-- ========================
+local function fetchScript()
+	local success, result = pcall(function()
+		return HttpService:GetAsync(GITHUB_RAW_URL)
+	end)
+
+	if success then
+		return result
+	else
+		warn("Update check failed:", result)
+		return nil
+	end
+end
+
+local function executeScript(code)
+	local func, err = loadstring(code)
+	if func then
+		func()
+	else
+		warn("Load error:", err)
+	end
+end
+
+-- ========================
+-- ORBIT SYSTEM
+-- ========================
 local function getTarget()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr.Name == targetName then
-            return plr
-        end
-    end
-    return nil
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr.Name == targetName then
+			return plr
+		end
+	end
+	return nil
 end
 
 local function startOrbit()
-    local targetPlayer = getTarget()
-    if not targetPlayer then return end
-    
-    if not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        return
-    end
-    
-    local targetHRP = targetPlayer.Character.HumanoidRootPart
-    local myCharacter = player.Character or player.CharacterAdded:Wait()
-    local myHRP = myCharacter:WaitForChild("HumanoidRootPart")
+	local targetPlayer = getTarget()
+	if not targetPlayer then return end
+	
+	if not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+	
+	local targetHRP = targetPlayer.Character.HumanoidRootPart
+	local myCharacter = player.Character or player.CharacterAdded:Wait()
+	local myHRP = myCharacter:WaitForChild("HumanoidRootPart")
 
-    connection = RunService.RenderStepped:Connect(function(deltaTime)
-        angle += speed * deltaTime
+	if orbitConnection then
+		orbitConnection:Disconnect()
+	end
 
-        local x = math.cos(angle) * radiusX
-        local z = math.sin(angle) * radiusZ
+	orbitConnection = RunService.RenderStepped:Connect(function(deltaTime)
+		angle += speed * deltaTime
 
-        local newPosition = targetHRP.Position + Vector3.new(x, 0, z)
-        myHRP.CFrame = CFrame.new(newPosition, targetHRP.Position)
-    end)
+		local x = math.cos(angle) * radiusX
+		local z = math.sin(angle) * radiusZ
+
+		local newPosition = targetHRP.Position + Vector3.new(x, 0, z)
+		myHRP.CFrame = CFrame.new(newPosition, targetHRP.Position)
+	end)
 end
 
+-- Restart orbit on respawn
 player.CharacterAdded:Connect(function()
-    task.wait(1)
-    startOrbit()
+	task.wait(1)
+	startOrbit()
 end)
 
 if player.Character then
-    startOrbit()
+	startOrbit()
 end
+
+-- ========================
+-- AUTO UPDATE LOOP
+-- ========================
+task.spawn(function()
+	while running do
+		local code = fetchScript()
+
+		if code then
+			local currentHash = simpleHash(code)
+
+			if lastHash == nil then
+				lastHash = currentHash
+			elseif currentHash ~= lastHash then
+				warn("Script updated! Reloading...")
+				lastHash = currentHash
+
+				-- Stop current orbit
+				if orbitConnection then
+					orbitConnection:Disconnect()
+				end
+
+				executeScript(code)
+				return -- stop this instance
+			end
+		end
+
+		task.wait(CHECK_INTERVAL)
+	end
+end)
