@@ -1,1 +1,54 @@
-thiswork
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- 🔧 SETTINGS
+local targetName = "TARGET_PLAYER_NAME" -- Change this
+local radiusX = 10 -- Width of ellipse
+local radiusZ = 6  -- Depth of ellipse
+local speed = 1    -- Orbit speed
+
+local angle = 0
+local connection
+
+local function getTarget()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr.Name == targetName then
+            return plr
+        end
+    end
+    return nil
+end
+
+local function startOrbit()
+    local targetPlayer = getTarget()
+    if not targetPlayer then return end
+    
+    if not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    
+    local targetHRP = targetPlayer.Character.HumanoidRootPart
+    local myCharacter = player.Character or player.CharacterAdded:Wait()
+    local myHRP = myCharacter:WaitForChild("HumanoidRootPart")
+
+    connection = RunService.RenderStepped:Connect(function(deltaTime)
+        angle += speed * deltaTime
+
+        local x = math.cos(angle) * radiusX
+        local z = math.sin(angle) * radiusZ
+
+        local newPosition = targetHRP.Position + Vector3.new(x, 0, z)
+        myHRP.CFrame = CFrame.new(newPosition, targetHRP.Position)
+    end)
+end
+
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    startOrbit()
+end)
+
+if player.Character then
+    startOrbit()
+end
