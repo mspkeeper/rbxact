@@ -7,7 +7,7 @@ while true do
 		local player = Players.LocalPlayer
 
 		-- 🔧 SETTINGS
-		local targetName = "updatevar"
+		local targetName = "Hgamerplayer_br90"
 		local radiusX = 10
 		local radiusZ = 6
 		local speed = 1
