@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 -- 🔧 SETTINGS
-local targetName = "TARGET_PLAYER_NAME" -- Change this
+local targetName = "updatevar" -- Change this
 local radiusX = 10 -- Width of ellipse
 local radiusZ = 6  -- Depth of ellipse
 local speed = 1    -- Orbit speed
